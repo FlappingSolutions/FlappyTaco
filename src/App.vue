@@ -20,6 +20,14 @@ export default defineComponent({
 </script>
 
 <style lang="scss">
+html,
+body {
+  height: 100%;
+  width: 100%;
+  margin: 0px;
+  background-color: #f8f8f8;
+}
+
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;

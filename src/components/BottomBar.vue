@@ -22,6 +22,7 @@ export default {
         client
           .connect(options)
           .then(() => {
+            console.log("Connected to Intiface");
             connected.value = true;
           })
           .catch(error => {
@@ -36,6 +37,7 @@ export default {
         client
           .disconnect()
           .then(() => {
+            console.log("Disconnected from Intiface");
             connected.value = false;
           })
           .catch(error => {
@@ -60,7 +62,8 @@ export default {
 
 <style scoped>
 .bar {
-  position: "fixed";
+  display: flex;
+  position: fixed;
   bottom: 0px;
   width: 100%;
   height: 64px;
