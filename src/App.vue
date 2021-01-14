@@ -4,7 +4,20 @@
     <router-link to="/about">About</router-link>
   </div>
   <router-view />
+  <BottomBar />
 </template>
+
+<script lang="ts">
+import { defineComponent } from "vue";
+import BottomBar from "@/components/BottomBar.vue";
+
+export default defineComponent({
+  name: "App",
+  components: {
+    BottomBar
+  }
+});
+</script>
 
 <style lang="scss">
 #app {

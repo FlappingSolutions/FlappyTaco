@@ -2,8 +2,20 @@ import { createApp } from "vue";
 import App from "./App.vue";
 import router from "./router";
 import store from "./store";
+import { ButtplugClient, buttplugInit } from "buttplug";
 
-createApp(App)
-  .use(store)
-  .use(router)
-  .mount("#app");
+buttplugInit()
+  .then(() => {
+    // TODO use vuex to inject the client?
+    const client = new ButtplugClient();
+
+    createApp(App)
+      .use(store)
+      .use(router)
+      .provide("buttplugClient", client)
+      .mount("#app");
+  })
+  .catch(error => {
+    // TODO serve error page
+    console.error("Could not initialize Buttplug:", error);
+  });
