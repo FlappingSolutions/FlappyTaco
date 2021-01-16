@@ -3,7 +3,6 @@
  */
 
 import { ActionContext } from "vuex";
-import { ConnectorType } from "@/services/vibes";
 import {
   ButtplugClient,
   ButtplugClientDevice,
@@ -11,6 +10,11 @@ import {
   ButtplugEmbeddedConnectorOptions,
   ButtplugWebsocketConnectorOptions
 } from "buttplug";
+
+export enum ConnectorType {
+  "EMBEDDED",
+  "EXTERNAL"
+}
 
 const connectorOptions = {
   [ConnectorType.EMBEDDED]: ButtplugEmbeddedConnectorOptions,
