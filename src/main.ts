@@ -1,7 +1,7 @@
 import { createApp } from "vue";
 import App from "./App.vue";
 import router from "./router";
-import store from "./store";
+import store, { key } from "./store";
 import { ButtplugClient, buttplugInit } from "buttplug";
 
 buttplugInit()
@@ -10,7 +10,7 @@ buttplugInit()
     const client = new ButtplugClient();
 
     createApp(App)
-      .use(store)
+      .use(store, key)
       .use(router)
       .provide("buttplugClient", client)
       .mount("#app");

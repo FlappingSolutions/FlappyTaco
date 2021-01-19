@@ -2,7 +2,7 @@
  * Vuex store module to handle Buttplug devices
  */
 
-import { ActionContext } from "vuex";
+import { ActionContext, Module } from "vuex";
 import {
   ButtplugClient,
   ButtplugClientDevice,
@@ -10,6 +10,7 @@ import {
   ButtplugEmbeddedConnectorOptions,
   ButtplugWebsocketConnectorOptions
 } from "buttplug";
+import { RootState } from "..";
 
 export enum ConnectorType {
   "EMBEDDED",
@@ -23,7 +24,7 @@ const connectorOptions = {
 
 // State definitions
 
-interface DevicesState {
+export interface DevicesState {
   client: ButtplugClient | null;
   connector: ConnectorType;
   vibrate: boolean;
@@ -145,7 +146,7 @@ const getClient = async (state: DevicesState): Promise<ButtplugClient> => {
 const connect = async ({
   state,
   commit
-}: ActionContext<DevicesState, unknown>) => {
+}: ActionContext<DevicesState, RootState>) => {
   try {
     getClient(state);
   } catch (_) {
@@ -169,7 +170,7 @@ const connect = async ({
 const disconnect = async ({
   state,
   commit
-}: ActionContext<DevicesState, unknown>) => {
+}: ActionContext<DevicesState, RootState>) => {
   const client = await getClient(state);
 
   await client.disconnect();
@@ -181,20 +182,20 @@ const disconnect = async ({
 
 const startScanning = async ({
   state
-}: ActionContext<DevicesState, unknown>) => {
+}: ActionContext<DevicesState, RootState>) => {
   const client = await getClient(state);
   await client.startScanning();
 };
 
 const stopScanning = async ({
   state
-}: ActionContext<DevicesState, unknown>) => {
+}: ActionContext<DevicesState, RootState>) => {
   const client = await getClient(state);
   await client.stopScanning();
 };
 
 const vibrate = async (
-  { state, commit }: ActionContext<DevicesState, unknown>,
+  { state, commit }: ActionContext<DevicesState, RootState>,
   value?: number
 ) => {
   if (value != null) {
@@ -216,14 +217,14 @@ const vibrate = async (
 
 const stopVibration = async ({
   state
-}: ActionContext<DevicesState, unknown>) => {
+}: ActionContext<DevicesState, RootState>) => {
   await getClient(state);
 
   return await getSelectedDevice(state)?.stop();
 };
 
 const enableVibration = async (
-  context: ActionContext<DevicesState, unknown>,
+  context: ActionContext<DevicesState, RootState>,
   startNow = false
 ) => {
   const { state, commit, dispatch } = context;
@@ -241,7 +242,7 @@ const disableVibration = async ({
   state,
   commit,
   dispatch
-}: ActionContext<DevicesState, unknown>) => {
+}: ActionContext<DevicesState, RootState>) => {
   commit("setVibrationEnabled", false);
 
   await getClient(state);
@@ -260,9 +261,12 @@ const actions = {
   disableVibration
 };
 
-export default {
+const DevicesModule: Module<DevicesState, RootState> = {
+  namespaced: true,
   state,
   getters,
   mutations,
   actions
 };
+
+export default DevicesModule;

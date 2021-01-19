@@ -1,16 +1,19 @@
 <template>
   <router-view />
   <BottomBar />
+  <Settings :showSettings="true" />
 </template>
 
 <script lang="ts">
 import { defineComponent } from "vue";
 import BottomBar from "@/components/BottomBar.vue";
+import Settings from "@/components/Settings.vue";
 
 export default defineComponent({
   name: "App",
   components: {
-    BottomBar
+    BottomBar,
+    Settings
   }
 });
 </script>

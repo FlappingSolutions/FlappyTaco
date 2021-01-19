@@ -4,8 +4,9 @@
 
 <script lang="ts">
 import { Application, Sprite } from "pixi.js";
+import { defineComponent } from "vue";
 import * as tacoImage from "../assets/taco.png";
-export default {
+export default defineComponent({
   name: "Game",
   mounted() {
     const app = new Application({
@@ -25,7 +26,7 @@ export default {
       document.getElementById("game-container")?.appendChild(app.view);
     });
   }
-};
+});
 </script>
 
 <style lang="scss" scoped>
