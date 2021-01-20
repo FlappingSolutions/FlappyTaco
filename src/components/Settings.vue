@@ -4,6 +4,12 @@
       <h3>Settings</h3>
     </template>
     <template v-slot:content>
+      <h5>Enable vibration:</h5>
+      <input
+        type="checkbox"
+        :value="vibrationEnabled"
+        @change="setVibrationEnabled"
+      />
       <h5>Vibration level: {{ vibrationModifier }}</h5>
       <input
         type="range"
@@ -12,6 +18,13 @@
         :value="vibrationModifier"
         @change="setVibrationModifier"
       />
+      <div class="h-divider" />
+      <h5>Buttplug status: {{ isConnected ? "Connected" : "Disconnected" }}</h5>
+      <div class="buttplug-controls">
+        <button @click="toggleConnection" :disabled="isConnecting">
+          {{ isConnected ? "Disconnect" : "Connect" }}
+        </button>
+      </div>
     </template>
   </Modal>
 </template>
@@ -37,8 +50,33 @@ export default defineComponent({
       setVibrationModifier: (e: Event) =>
         devicesStore.setVibrationModifier(
           Number((e.target as HTMLInputElement).value) / 10
-        )
+        ),
+      vibrationEnabled: computed(() => devicesStore.vibrationEnabled),
+      setVibrationEnabled: (e: Event) =>
+        devicesStore.setVibrationActive(
+          Boolean((e.target as HTMLInputElement).value)
+        ),
+      isConnected: computed(() => devicesStore.isConnected),
+      toggleConnection: async () => {
+        try {
+          devicesStore.isConnected
+            ? await devicesStore.disconnect()
+            : await devicesStore.connect();
+        } catch (error) {
+          console.error(error);
+        }
+      },
+      isConnecting: computed(() => devicesStore.isConnecting)
     };
   }
 });
 </script>
+
+<style lang="scss" scoped>
+.h-divider {
+  width: 100%;
+  height: 2px;
+  border-radius: 1px;
+  background-color: #000000;
+}
+</style>

@@ -3,11 +3,11 @@
  */
 
 import {
+  config,
   Module,
   VuexModule,
   Mutation,
-  Action,
-  MutationAction
+  Action
 } from "vuex-module-decorators";
 import {
   ButtplugClient,
@@ -27,6 +27,9 @@ const connectorOptions = {
   [ConnectorType.EXTERNAL]: ButtplugWebsocketConnectorOptions
 };
 
+// Disable error wrapper for module actions
+config.rawError = true;
+
 // State definitions
 @Module({
   name: "Devices",
@@ -36,6 +39,7 @@ const connectorOptions = {
 export default class Devices extends VuexModule {
   public client: ButtplugClient | null = null;
   connector: ConnectorType = ConnectorType.EXTERNAL;
+  public isConnecting = false;
   public vibrationEnabled = true;
   public currentVibration = 0.0; // 0.0 - 1.0
   public vibrationModifier = 1.0; // 0.0 - 1.0
@@ -75,6 +79,11 @@ export default class Devices extends VuexModule {
   @Mutation
   setConnector(connector: ConnectorType) {
     this.connector = connector;
+  }
+
+  @Mutation
+  setIsConnecting(value: boolean) {
+    this.isConnecting = value;
   }
 
   @Mutation
@@ -121,20 +130,11 @@ export default class Devices extends VuexModule {
     }
   }
 
-  // Utility method to get the client only if it's connected
-  async getClient(): Promise<ButtplugClient> {
-    if (!this.client?.Connected) {
-      throw "Client is not connected";
-    }
-
-    return this.client;
-  }
-
-  @Action({ commit: "client" })
+  @Action({ commit: "setClient" })
   async connect() {
-    try {
-      await this.getClient();
-    } catch (_) {
+    if (!this.context.getters.isConnected) {
+      this.context.commit("setIsConnecting", true);
+
       const client = new ButtplugClient("Flappy Taco");
 
       // Setup listeners to add devices
@@ -147,36 +147,41 @@ export default class Devices extends VuexModule {
 
       await client.connect(new connectorOptions[this.connector]());
 
+      this.context.commit("setIsConnecting", false);
+
       return client;
     }
 
+    this.context.commit("setIsConnecting", false);
+
     // If we're here it means that the client was already connected, so throw error
-    throw "Client already connected";
+    throw "Client is already connected";
   }
 
-  @MutationAction({ mutate: ["selectedDeviceIndex", "client"] })
+  @Action
   async disconnect() {
-    const client = await this.getClient();
+    if (!this.context.getters.isConnected) throw "Client is not connected";
+    const client = (this.context.state as Devices).client;
 
-    await client.disconnect();
-    client.removeAllListeners();
+    await client?.disconnect();
+    client?.removeAllListeners();
 
-    return {
-      selectedDeviceIndex: null,
-      client: null
-    };
+    this.context.commit("selectDevice", null);
+    this.context.commit("setClient", null);
   }
 
   @Action
   async startScanning() {
-    const client = await this.getClient();
-    await client.startScanning();
+    if (!this.context.getters.isConnected) return;
+    const client = (this.context.state as Devices).client;
+    await client?.startScanning();
   }
 
   @Action
   async stopScanning() {
-    const client = await this.getClient();
-    await client.stopScanning();
+    if (!this.context.getters.isConnected) return;
+    const client = (this.context.state as Devices).client;
+    await client?.stopScanning();
   }
 
   @Action
@@ -185,7 +190,7 @@ export default class Devices extends VuexModule {
       this.context.commit("setCurrentVibration", value);
     }
 
-    await this.getClient();
+    if (!this.context.getters.isConnected) return;
 
     const device = this.selectedDevice;
     if (this.vibrationEnabled) {
@@ -200,28 +205,21 @@ export default class Devices extends VuexModule {
 
   @Action
   async stopVibration() {
-    await this.getClient();
+    if (!this.context.getters.isConnected) return;
 
     await this.selectedDevice?.stop();
   }
 
-  @Action({ commit: "setVibrationEnabled" })
-  async enableVibration(startNow = false) {
-    await this.getClient();
+  @Action
+  async setVibrationActive(value: boolean, startNow = false) {
+    this.context.commit("setVibrate", value);
 
-    if (startNow) {
+    if (!this.context.getters.isConnected) return;
+
+    if (!value) {
+      await this.context.dispatch("stopVibration");
+    } else if (startNow) {
       await this.context.dispatch("vibrate");
     }
-
-    return true;
-  }
-
-  @Action({ commit: "setVibrationEnabled" })
-  async disableVibration() {
-    await this.getClient();
-
-    await this.context.dispatch("stopVibration");
-
-    return false;
   }
 }
