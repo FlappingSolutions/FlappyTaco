@@ -2,7 +2,13 @@
  * Vuex store module to handle Buttplug devices
  */
 
-import { ActionContext, Module } from "vuex";
+import {
+  Module,
+  VuexModule,
+  Mutation,
+  Action,
+  MutationAction
+} from "vuex-module-decorators";
 import {
   ButtplugClient,
   ButtplugClientDevice,
@@ -10,7 +16,6 @@ import {
   ButtplugEmbeddedConnectorOptions,
   ButtplugWebsocketConnectorOptions
 } from "buttplug";
-import { RootState } from "..";
 
 export enum ConnectorType {
   "EMBEDDED",
@@ -23,250 +28,200 @@ const connectorOptions = {
 };
 
 // State definitions
-
-export interface DevicesState {
-  client: ButtplugClient | null;
-  connector: ConnectorType;
-  vibrate: boolean;
-  currentVibration: number; // 0.0 - 1.0
-  vibrationModifier: number; // 0.0 - 1.0
-  selectedDevice: number | null;
-}
-
-const state: DevicesState = {
-  client: null,
-  connector: ConnectorType.EXTERNAL,
-  vibrate: true,
-  currentVibration: 0.0,
-  vibrationModifier: 1.0,
-  selectedDevice: null
-};
-
-// Getters
-
-// Get only devices that can vibrate
-const getDevices = (state: DevicesState) =>
-  state.client?.Devices.filter(device =>
-    device.messageAttributes(ButtplugDeviceMessageType.VibrateCmd)
-  ).sort((d1, d2) => d1.Index - d2.Index);
-
-const getSelectedDevice = (state: DevicesState) =>
-  state.client?.Devices.find(
-    (device: ButtplugClientDevice) => device.Index === state.selectedDevice
-  );
-
-const getComputedVibration = (state: DevicesState) =>
-  state.currentVibration * state.vibrationModifier;
-
-const isConnected = (state: DevicesState) =>
-  state.client ? state.client.Connected : false;
-
-const isScanning = (state: DevicesState) => {
-  state.client ? state.client.isScanning : false;
-};
-
-const getters = {
-  getDevices,
-  getSelectedDevice,
-  getComputedVibration,
-  isConnected,
-  isScanning
-};
-
-// Mutations
-
-const setClient = (state: DevicesState, client: ButtplugClient | null) => {
-  state.client = client;
-};
-
-const setConnector = (state: DevicesState, connector: ConnectorType) => {
-  state.connector = connector;
-};
-
-const setVibrate = (state: DevicesState, value: boolean) => {
-  state.vibrate = value;
-};
-
-const setCurrentVibration = (state: DevicesState, value: number) => {
-  state.currentVibration = Math.max(0, Math.min(value, 1));
-};
-
-const setVibrationModifier = (state: DevicesState, value: number) => {
-  state.vibrationModifier = Math.max(0, Math.min(value, 1));
-};
-
-const selectDevice = (state: DevicesState, index: number | null) => {
-  if (index == null) {
-    state.selectedDevice = null;
-    return;
-  }
-
-  if (!state.client) return;
-
-  const devices = state.client.Devices;
-
-  if (index < devices.length && index >= 0) {
-    state.selectedDevice = index;
-  }
-};
-
-const devicesChanged = () => {
-  // TODO Does this work?
-  return;
-};
-
-const removeDevice = (state: DevicesState, device: ButtplugClientDevice) => {
-  if (state.selectedDevice == device.Index) {
-    state.selectedDevice = null;
-  }
-};
-
-const mutations = {
-  setClient,
-  setConnector,
-  setVibrate,
-  setCurrentVibration,
-  setVibrationModifier,
-  devicesChanged,
-  removeDevice,
-  selectDevice
-};
-
-// Actions
-
-// Utility method to get the client only if it's connected
-const getClient = async (state: DevicesState): Promise<ButtplugClient> => {
-  if (!state.client?.Connected) {
-    throw "Client is not connected";
-  }
-
-  return state.client;
-};
-
-const connect = async ({
-  state,
-  commit
-}: ActionContext<DevicesState, RootState>) => {
-  try {
-    getClient(state);
-  } catch (_) {
-    const client = new ButtplugClient("Flappy Taco");
-
-    // Setup listeners to add devices
-    client.addListener("deviceadded", devicesChanged);
-    client.addListener("deviceremoved", removeDevice);
-
-    await client.connect(new connectorOptions[state.connector]());
-
-    commit("setClient", client);
-
-    return;
-  }
-
-  // If we're here it means that the client was already connected, so throw error
-  throw "Client already connected";
-};
-
-const disconnect = async ({
-  state,
-  commit
-}: ActionContext<DevicesState, RootState>) => {
-  const client = await getClient(state);
-
-  await client.disconnect();
-  client.removeAllListeners();
-
-  commit("selectDevice", null);
-  commit("setClient", null);
-};
-
-const startScanning = async ({
-  state
-}: ActionContext<DevicesState, RootState>) => {
-  const client = await getClient(state);
-  await client.startScanning();
-};
-
-const stopScanning = async ({
-  state
-}: ActionContext<DevicesState, RootState>) => {
-  const client = await getClient(state);
-  await client.stopScanning();
-};
-
-const vibrate = async (
-  { state, commit }: ActionContext<DevicesState, RootState>,
-  value?: number
-) => {
-  if (value != null) {
-    commit("setCurrentVibration", value);
-  }
-
-  await getClient(state);
-
-  const device = getSelectedDevice(state);
-  if (state.vibrate) {
-    const vibration = getComputedVibration(state);
-
-    await device?.vibrate(vibration);
-  } else {
-    // This case shouldn't happen, but we'll handle it just in case
-    await device?.stop();
-  }
-};
-
-const stopVibration = async ({
-  state
-}: ActionContext<DevicesState, RootState>) => {
-  await getClient(state);
-
-  return await getSelectedDevice(state)?.stop();
-};
-
-const enableVibration = async (
-  context: ActionContext<DevicesState, RootState>,
-  startNow = false
-) => {
-  const { state, commit, dispatch } = context;
-
-  commit("setVibrationEnabled", true);
-
-  await getClient(state);
-
-  if (startNow) {
-    await dispatch("vibrate");
-  }
-};
-
-const disableVibration = async ({
-  state,
-  commit,
-  dispatch
-}: ActionContext<DevicesState, RootState>) => {
-  commit("setVibrationEnabled", false);
-
-  await getClient(state);
-
-  await dispatch("stopVibration");
-};
-
-const actions = {
-  connect,
-  disconnect,
-  startScanning,
-  stopScanning,
-  vibrate,
-  stopVibration,
-  enableVibration,
-  disableVibration
-};
-
-const DevicesModule: Module<DevicesState, RootState> = {
+@Module({
+  name: "Devices",
   namespaced: true,
-  state,
-  getters,
-  mutations,
-  actions
-};
+  stateFactory: true
+})
+export default class Devices extends VuexModule {
+  public client: ButtplugClient | null = null;
+  connector: ConnectorType = ConnectorType.EXTERNAL;
+  public vibrationEnabled = true;
+  public currentVibration = 0.0; // 0.0 - 1.0
+  public vibrationModifier = 1.0; // 0.0 - 1.0
+  selectedDeviceIndex: number | null = null;
 
-export default DevicesModule;
+  // Get only devices that can vibrate
+  get connectedDevices() {
+    return this.client?.Devices.filter(device =>
+      device.messageAttributes(ButtplugDeviceMessageType.VibrateCmd)
+    ).sort((d1, d2) => d1.Index - d2.Index);
+  }
+
+  get selectedDevice(): ButtplugClientDevice | undefined {
+    return this.client?.Devices.find(
+      (device: ButtplugClientDevice) =>
+        device.Index === this.selectedDeviceIndex
+    );
+  }
+
+  get computedVibration() {
+    return this.currentVibration * this.vibrationModifier;
+  }
+
+  get isConnected() {
+    return this.client ? this.client.Connected : false;
+  }
+
+  get isScanning() {
+    return this.client ? this.client.isScanning : false;
+  }
+
+  @Mutation
+  setClient(client: ButtplugClient | null) {
+    this.client = client;
+  }
+
+  @Mutation
+  setConnector(connector: ConnectorType) {
+    this.connector = connector;
+  }
+
+  @Mutation
+  setVibrate(value: boolean) {
+    this.vibrationEnabled = value;
+  }
+
+  @Mutation
+  setCurrentVibration(value: number) {
+    this.currentVibration = Math.max(0, Math.min(value, 1));
+  }
+
+  @Mutation
+  setVibrationModifier(value: number) {
+    this.vibrationModifier = Math.max(0, Math.min(value, 1));
+  }
+
+  @Mutation
+  selectDevice(index: number | null) {
+    if (index == null) {
+      this.selectedDeviceIndex = null;
+      return;
+    }
+
+    if (!this.client) return;
+
+    const devices = this.client.Devices;
+
+    if (index < devices.length && index >= 0) {
+      this.selectedDeviceIndex = index;
+    }
+  }
+
+  @Mutation
+  devicesChanged() {
+    // TODO Does this work?
+    return;
+  }
+
+  @Mutation
+  removeDevice(device: ButtplugClientDevice) {
+    if (this.selectedDeviceIndex == device.Index) {
+      this.selectedDeviceIndex = null;
+    }
+  }
+
+  // Utility method to get the client only if it's connected
+  async getClient(): Promise<ButtplugClient> {
+    if (!this.client?.Connected) {
+      throw "Client is not connected";
+    }
+
+    return this.client;
+  }
+
+  @Action({ commit: "client" })
+  async connect() {
+    try {
+      await this.getClient();
+    } catch (_) {
+      const client = new ButtplugClient("Flappy Taco");
+
+      // Setup listeners to add devices
+      client.addListener("deviceadded", () => {
+        this.context.commit("devicesChanged");
+      });
+      client.addListener("deviceremoved", device => {
+        this.context.commit("deviceRemoved", device);
+      });
+
+      await client.connect(new connectorOptions[this.connector]());
+
+      return client;
+    }
+
+    // If we're here it means that the client was already connected, so throw error
+    throw "Client already connected";
+  }
+
+  @MutationAction({ mutate: ["selectedDeviceIndex", "client"] })
+  async disconnect() {
+    const client = await this.getClient();
+
+    await client.disconnect();
+    client.removeAllListeners();
+
+    return {
+      selectedDeviceIndex: null,
+      client: null
+    };
+  }
+
+  @Action
+  async startScanning() {
+    const client = await this.getClient();
+    await client.startScanning();
+  }
+
+  @Action
+  async stopScanning() {
+    const client = await this.getClient();
+    await client.stopScanning();
+  }
+
+  @Action
+  async vibrate(value?: number) {
+    if (value != null) {
+      this.context.commit("setCurrentVibration", value);
+    }
+
+    await this.getClient();
+
+    const device = this.selectedDevice;
+    if (this.vibrationEnabled) {
+      const vibration = this.computedVibration;
+
+      await device?.vibrate(vibration);
+    } else {
+      // This case shouldn't happen, but we'll handle it just in case
+      await device?.stop();
+    }
+  }
+
+  @Action
+  async stopVibration() {
+    await this.getClient();
+
+    await this.selectedDevice?.stop();
+  }
+
+  @Action({ commit: "setVibrationEnabled" })
+  async enableVibration(startNow = false) {
+    await this.getClient();
+
+    if (startNow) {
+      await this.context.dispatch("vibrate");
+    }
+
+    return true;
+  }
+
+  @Action({ commit: "setVibrationEnabled" })
+  async disableVibration() {
+    await this.getClient();
+
+    await this.context.dispatch("stopVibration");
+
+    return false;
+  }
+}

@@ -20,22 +20,22 @@
 import Modal from "@/components/Modal.vue";
 import { computed, defineComponent } from "vue";
 import { useStore } from "@/store";
+import { getModule } from "vuex-module-decorators";
+import Devices from "@/store/modules/devices";
 
 export default defineComponent({
   name: "Settings",
   components: { Modal },
   props: ["showSettings"],
   setup() {
-    const { state, commit } = useStore();
-    const { devices } = state;
+    const devicesStore = getModule(Devices, useStore());
 
     return {
-      vibrationModifier: computed(
-        () => Number(devices?.vibrationModifier) * 10
-      ),
+      vibrationModifier: computed(() => {
+        return Number(devicesStore.vibrationModifier) * 10;
+      }),
       setVibrationModifier: (e: Event) =>
-        commit(
-          "devices/setVibrationModifier",
+        devicesStore.setVibrationModifier(
           Number((e.target as HTMLInputElement).value) / 10
         )
     };
