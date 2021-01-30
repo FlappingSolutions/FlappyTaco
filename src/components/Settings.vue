@@ -7,7 +7,7 @@
       <h5>Enable vibration:</h5>
       <input
         type="checkbox"
-        :value="vibrationEnabled"
+        :checked="vibrationEnabled"
         @change="setVibrationEnabled"
       />
       <h5>Vibration level: {{ vibrationModifier }}</h5>
@@ -55,10 +55,11 @@ export default defineComponent({
           Number((e.target as HTMLInputElement).value) / 10
         ),
       vibrationEnabled: computed(() => settingsStore.vibrationEnabled),
-      setVibrationEnabled: (e: Event) =>
+      setVibrationEnabled: (e: Event) => {
         settingsStore.setVibrationEnabled(
-          Boolean((e.target as HTMLInputElement).value)
-        ),
+          Boolean((e.target as HTMLInputElement).checked)
+        );
+      },
       isConnected: computed(() => devicesStore.isConnected),
       toggleConnection: async () => {
         try {
