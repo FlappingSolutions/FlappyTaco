@@ -16,11 +16,7 @@ import {
   ButtplugEmbeddedConnectorOptions,
   ButtplugWebsocketConnectorOptions
 } from "buttplug";
-
-export enum ConnectorType {
-  "EMBEDDED",
-  "EXTERNAL"
-}
+import { ConnectorType } from "./settings";
 
 const connectorOptions = {
   [ConnectorType.EMBEDDED]: ButtplugEmbeddedConnectorOptions,
@@ -38,11 +34,8 @@ config.rawError = true;
 })
 export default class Devices extends VuexModule {
   public client: ButtplugClient | null = null;
-  connector: ConnectorType = ConnectorType.EXTERNAL;
   public isConnecting = false;
-  public vibrationEnabled = true;
   public currentVibration = 0.0; // 0.0 - 1.0
-  public vibrationModifier = 1.0; // 0.0 - 1.0
   selectedDeviceIndex: number | null = null;
 
   // Get only devices that can vibrate
@@ -59,10 +52,6 @@ export default class Devices extends VuexModule {
     );
   }
 
-  get computedVibration() {
-    return this.currentVibration * this.vibrationModifier;
-  }
-
   get isConnected() {
     return this.client ? this.client.Connected : false;
   }
@@ -77,18 +66,8 @@ export default class Devices extends VuexModule {
   }
 
   @Mutation
-  setConnector(connector: ConnectorType) {
-    this.connector = connector;
-  }
-
-  @Mutation
   setIsConnecting(value: boolean) {
     this.isConnecting = value;
-  }
-
-  @Mutation
-  setVibrate(value: boolean) {
-    this.vibrationEnabled = value;
   }
 
   @Mutation
@@ -96,10 +75,10 @@ export default class Devices extends VuexModule {
     this.currentVibration = Math.max(0, Math.min(value, 1));
   }
 
-  @Mutation
-  setVibrationModifier(value: number) {
-    this.vibrationModifier = Math.max(0, Math.min(value, 1));
-  }
+  // @Mutation
+  // setVibrationModifier(value: number) {
+  //   this.vibrationModifier = Math.max(0, Math.min(value, 1));
+  // }
 
   @Mutation
   selectDevice(index: number | null) {
@@ -131,8 +110,8 @@ export default class Devices extends VuexModule {
   }
 
   @Action({ commit: "setClient" })
-  async connect() {
-    if (!this.context.getters.isConnected) {
+  async connect(connector: ConnectorType) {
+    if (!this.isConnected) {
       this.context.commit("setIsConnecting", true);
 
       const client = new ButtplugClient("Flappy Taco");
@@ -145,7 +124,7 @@ export default class Devices extends VuexModule {
         this.context.commit("deviceRemoved", device);
       });
 
-      await client.connect(new connectorOptions[this.connector]());
+      await client.connect(new connectorOptions[connector]());
 
       this.context.commit("setIsConnecting", false);
 
@@ -160,7 +139,7 @@ export default class Devices extends VuexModule {
 
   @Action
   async disconnect() {
-    if (!this.context.getters.isConnected) throw "Client is not connected";
+    if (!this.isConnected) throw "Client is not connected";
     const client = (this.context.state as Devices).client;
 
     await client?.disconnect();
@@ -172,14 +151,14 @@ export default class Devices extends VuexModule {
 
   @Action
   async startScanning() {
-    if (!this.context.getters.isConnected) return;
+    if (!this.isConnected) return;
     const client = (this.context.state as Devices).client;
     await client?.startScanning();
   }
 
   @Action
   async stopScanning() {
-    if (!this.context.getters.isConnected) return;
+    if (!this.isConnected) return;
     const client = (this.context.state as Devices).client;
     await client?.stopScanning();
   }
@@ -190,36 +169,15 @@ export default class Devices extends VuexModule {
       this.context.commit("setCurrentVibration", value);
     }
 
-    if (!this.context.getters.isConnected) return;
+    if (!this.isConnected) return;
 
-    const device = this.selectedDevice;
-    if (this.vibrationEnabled) {
-      const vibration = this.computedVibration;
-
-      await device?.vibrate(vibration);
-    } else {
-      // This case shouldn't happen, but we'll handle it just in case
-      await device?.stop();
-    }
+    await this.selectedDevice?.vibrate(this.currentVibration);
   }
 
   @Action
   async stopVibration() {
-    if (!this.context.getters.isConnected) return;
+    if (!this.isConnected) return;
 
     await this.selectedDevice?.stop();
-  }
-
-  @Action
-  async setVibrationActive(value: boolean, startNow = false) {
-    this.context.commit("setVibrate", value);
-
-    if (!this.context.getters.isConnected) return;
-
-    if (!value) {
-      await this.context.dispatch("stopVibration");
-    } else if (startNow) {
-      await this.context.dispatch("vibrate");
-    }
   }
 }

@@ -1,6 +1,7 @@
 import { InjectionKey } from "vue";
 import { createStore, useStore as baseUseStore, Store } from "vuex";
 import Devices from "./modules/devices";
+import Settings from "./modules/settings";
 
 export interface RootState {
   version: string;
@@ -19,6 +20,7 @@ export default createStore({
   mutations: {},
   actions: {},
   modules: {
-    Devices
+    Devices,
+    Settings
   }
 });

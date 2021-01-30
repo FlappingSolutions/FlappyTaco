@@ -35,25 +35,28 @@ import { computed, defineComponent } from "vue";
 import { useStore } from "@/store";
 import { getModule } from "vuex-module-decorators";
 import Devices from "@/store/modules/devices";
+import Settings from "@/store/modules/settings";
 
 export default defineComponent({
   name: "Settings",
   components: { Modal },
   props: ["showSettings"],
   setup() {
-    const devicesStore = getModule(Devices, useStore());
+    const store = useStore();
+    const devicesStore = getModule(Devices, store);
+    const settingsStore = getModule(Settings, store);
 
     return {
       vibrationModifier: computed(() => {
-        return Number(devicesStore.vibrationModifier) * 10;
+        return Number(settingsStore.vibrationModifier) * 10;
       }),
       setVibrationModifier: (e: Event) =>
-        devicesStore.setVibrationModifier(
+        settingsStore.setVibrationModifier(
           Number((e.target as HTMLInputElement).value) / 10
         ),
-      vibrationEnabled: computed(() => devicesStore.vibrationEnabled),
+      vibrationEnabled: computed(() => settingsStore.vibrationEnabled),
       setVibrationEnabled: (e: Event) =>
-        devicesStore.setVibrationActive(
+        settingsStore.setVibrationEnabled(
           Boolean((e.target as HTMLInputElement).value)
         ),
       isConnected: computed(() => devicesStore.isConnected),
@@ -61,7 +64,7 @@ export default defineComponent({
         try {
           devicesStore.isConnected
             ? await devicesStore.disconnect()
-            : await devicesStore.connect();
+            : await devicesStore.connect(settingsStore.connector);
         } catch (error) {
           console.error(error);
         }
