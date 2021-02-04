@@ -1,11 +1,11 @@
 <template>
   <router-view />
-  <BottomBar />
-  <Settings :showSettings="true" />
+  <BottomBar v-on:toggle-settings="toggleSettings" />
+  <Settings :showSettings="showSettings" v-on:close="toggleSettings" />
 </template>
 
 <script lang="ts">
-import { defineComponent } from "vue";
+import { defineComponent, ref } from "vue";
 import BottomBar from "@/components/BottomBar.vue";
 import Settings from "@/components/Settings.vue";
 
@@ -14,6 +14,18 @@ export default defineComponent({
   components: {
     BottomBar,
     Settings
+  },
+  setup() {
+    const showSettings = ref(false);
+
+    function toggleSettings() {
+      showSettings.value = !showSettings.value;
+    }
+
+    return {
+      showSettings,
+      toggleSettings
+    };
   }
 });
 </script>

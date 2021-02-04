@@ -1,60 +1,23 @@
 <template>
   <div class="bar">
-    <button v-on:click="toggleConnection" id="intiface-connect">
-      {{ connected ? "Disconnect" : "Connect" }}
+    <button v-on:click="toggleSettings" id="settings">
+      Settings
     </button>
   </div>
 </template>
 
 <script lang="ts">
-import { inject, ref } from "vue";
-import { ButtplugClient, ButtplugWebsocketConnectorOptions } from "buttplug";
+import { EmitsOptions } from "@vue/test-utils/dist/mount";
+import { SetupContext } from "vue";
 export default {
   name: "BottomBar",
-  setup() {
-    const client: ButtplugClient | undefined = inject("buttplugClient");
-    const connected = ref(false);
-
-    const options = new ButtplugWebsocketConnectorOptions();
-
-    const connect = () => {
-      if (client) {
-        client
-          .connect(options)
-          .then(() => {
-            console.log("Connected to Intiface");
-            connected.value = true;
-          })
-          .catch(error => {
-            console.error("Could not connect to Intiface: ", error);
-          });
-      } else {
-        console.error("Buttplug client not found");
-      }
-    };
-    const disconnect = () => {
-      if (client) {
-        client
-          .disconnect()
-          .then(() => {
-            console.log("Disconnected from Intiface");
-            connected.value = false;
-          })
-          .catch(error => {
-            console.error("Could not disconnect from Intiface: ", error);
-          });
-      } else {
-        console.error("Buttplug client not found");
-      }
-    };
-
-    const toggleConnection = () => {
-      connected.value ? disconnect() : connect();
+  setup(_: {}, { emit }: SetupContext<EmitsOptions>) {
+    const toggleSettings = () => {
+      emit("toggleSettings");
     };
 
     return {
-      connected,
-      toggleConnection
+      toggleSettings
     };
   }
 };
@@ -73,5 +36,8 @@ export default {
     rgba(101, 13, 137, 1) 35%,
     rgba(146, 0, 117, 1) 100%
   );
+}
+#settings {
+  justify-self: flex-start;
 }
 </style>

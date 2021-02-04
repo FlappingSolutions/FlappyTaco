@@ -1,5 +1,5 @@
 <template>
-  <transition name="modal" v-if="isVisible()">
+  <transition name="modal" v-if="show">
     <div class="modal-mask">
       <div class="modal-wrapper">
         <div class="modal-container">
@@ -20,21 +20,20 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from "vue";
+import { defineComponent, EmitsOptions, SetupContext } from "vue";
 
 export default defineComponent({
   name: "Modal",
-  data: () => {
-    return { showModal: true };
-  },
-  props: ["show"],
-  methods: {
-    isVisible() {
-      return this.showModal && this.show;
-    },
-    close() {
-      this.showModal = false;
+  props: {
+    show: {
+      type: Boolean,
+      default: false
     }
+  },
+  setup(_: {}, { emit }: SetupContext<EmitsOptions>) {
+    return {
+      close: () => emit("close")
+    };
   }
 });
 </script>
